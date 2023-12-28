@@ -1,0 +1,102 @@
+#!/bin/bash
+
+# Function to display help
+function display_help() {
+    echo "Usage: internsctl [OPTION]"
+    echo "Options:"
+    echo "  --help     Display this help and exit"
+    echo "  --version  Output version information and exit"
+}
+
+# Function to display version
+function display_version() {
+    echo "internsctl version v0.1.0"
+}
+
+# Helper functions for various operations
+function get_cpu_info() {
+    lscpu
+}
+
+function get_memory_info() {
+    free
+}
+
+function create_user() {
+    sudo useradd -m "$1"
+}
+
+function list_users() {
+    awk -F: '$3 >= 1000 && $3 != 65534 {print $1}' /etc/passwd
+}
+
+function list_sudo_users() {
+    grep -Po '^sudo.+:\K.*$' /etc/group
+}
+
+function get_file_info() {
+    local file=$2
+    case "$1" in
+        --size|-s)
+            stat -c%s "$file"
+            ;;
+        --permissions|-p)
+            stat -c%A "$file"
+            ;;
+        --owner|-o)
+            stat -c%U "$file"
+            ;;
+        --last-modified|-m)
+            stat -c%y "$file"
+            ;;
+        *)
+            echo "File: $file"
+            echo "Access: $(stat -c%A "$file")"
+            echo "Size(B): $(stat -c%s "$file")"
+            echo "Owner: $(stat -c%U "$file")"
+            echo "Modify: $(stat -c%y "$file")"
+            ;;
+    esac
+}
+# Check command line options
+case "$1" in
+    --help)
+        display_help
+        ;;
+    --version)
+        display_version
+        ;;
+    cpu)
+        if [[ "$2" == "getinfo" ]]; then
+            get_cpu_info
+        fi
+        ;;
+    memory)
+        if [[ "$2" == "getinfo" ]]; then
+            get_memory_info
+        fi
+        ;;
+    user)
+        case "$2" in
+            create)
+                create_user "$3"
+                ;;
+            list)
+                if [[ "$3" == "--sudo-only" ]]; then
+                    list_sudo_users
+                else
+                    list_users
+                fi
+                ;;
+        esac
+        ;;
+    file)
+        if [[ "$2" == "getinfo" ]]; then
+            get_file_info "$3" "$4"
+        fi
+        ;;
+    *)
+        echo "Invalid option. Try 'internsctl --help' for more information."
+        ;;
+        
+esac
